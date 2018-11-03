@@ -48,7 +48,7 @@ class Inventory {
                 
                 int index = row + col * (n/itemsPerLine);
 
-                sb.append(String.format(" [%2d] %-16s |", 
+                sb.append(String.format(" [%2d] %-14s |", 
                             (index+1), content.get(i+j)));
             }
 

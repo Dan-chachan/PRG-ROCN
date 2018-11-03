@@ -12,7 +12,7 @@ class CliControl {
     private static final String CMDHELP_USAGE_PREFIX = "help ";
 
     public Dungeon dung;
-    private Mode mode = Mode.GENERAL;
+    public Mode mode = Mode.GENERAL;
 
     CliControl(Dungeon d) {
         this.scan = new Scanner(System.in);
@@ -33,24 +33,28 @@ class CliControl {
         Player player = new Player(playName);
         dung.placePlayer(player, playerPos);
         // ~~
-        System.out.println("\n\n Welcome to the Dungeon, " + player.name);
-
-
-        Dungeon.prettyPrint(dung.currentLevel);
+        System.out.println("\n\n Welcome to the Dungeon, " + player.name + "\n\n");
 
         while (true) {
             switch (this.mode) {
                 case GENERAL:
-                    System.out.println("\n\n [INVENTORY] [STATS] [WORLD]		[EXIT] \n\n");               
-                    
+                    System.out.println("\n\n [INVENTORY] [STATS] [WORLD]		[EXIT] \n\n"); 
+                    Dungeon.prettyPrint(dung.currentLevel);              
+                    break;
                 case INVENTORY:
                     System.out.println("\n\n [USE] [THROW AWAY]        [BACK]");
-    
+                    break;
                 case WORLD:
                     System.out.println("\n\n [MOVE] [EXIT LEVEL]        [BACK]");
-    
+                    Dungeon.prettyPrint(dung.currentLevel);
+                    break;
+                case STATS:
+                    System.out.println("\n\n [MANAGE SKILLS] [RESPEC]       [BACK]");
+                    break;
                 default:
                     System.out.println("\n\n [INVENTORY] [STATS] [WORLD]		[EXIT] \n\n");
+                    Dungeon.prettyPrint(dung.currentLevel);
+                    break;
             }
 
             System.out.println("\n\n What do you want to do?");
@@ -78,12 +82,12 @@ class CliControl {
         cmds.add(new Command("inventory", 
                 new String[]
                 {"inv", "i"},
-                "View your inventory. ") {
+                "Manage your inventory. ") {
 
             @Override
             void action() {
-                System.out.println("\n\nINVENTORY");
-                this.mode = Mode.INVENTORY;
+                System.out.println("\n\n INVENTORY");
+                mode = Mode.INVENTORY;
                 dung.player.viewInventory();
             }
         });
@@ -91,14 +95,14 @@ class CliControl {
         cmds.add(new Command("stats", 
                 new String[]
                 {"stat", "s"},
-                "View your inventory. ") {
+                "View your statistics. ") {
 
             @Override
             void action() {
-                System.out.println("\nINVENTORY");
+                System.out.println("\n\n STATS");
 
-                this.mode = INVENTORY;
-                dung.player.viewInventory();
+                mode = Mode.STATS;
+                //dung.player.viewStats();
             }
         });
 
@@ -107,10 +111,10 @@ class CliControl {
                 {"wor", "w"},
                 "Interact with the world. ") {
 
-                @Override
-                void action() {
-
-                }
+            @Override
+            void action() {
+                mode = Mode.WORLD;
+            }
             
         });
 
@@ -119,11 +123,11 @@ class CliControl {
                 {"b"},
                 "Return to previous menu. ") {
 
-                @Override
-                void action() {
-                    this.mode = Mode.GENERAL;
-                }
-                });  
+            @Override
+            void action() {
+                mode = Mode.GENERAL;
+            }
+        });  
         ///  EXIT AND HELP COMMANDS AT THE END  ///
 
         cmds.add(new Command(
@@ -233,10 +237,12 @@ class CliControl {
 
         abstract void action();
     }
+
 }
 
 enum Mode {
     GENERAL,
     INVENTORY,
-    WORLD
+    WORLD,
+    STATS
 }

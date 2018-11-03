@@ -1,0 +1,327 @@
+import java.io.InputStream;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.Scanner;
+
+class CliControl {
+
+    private Controller control;
+    private ArrayList<Command> commands;
+    private Scanner scan;
+
+    private static final String HELP_CMDNAME = "help";
+    private static final String CMDHELP_USAGE_PREFIX = "help ";
+
+    CliControl(Controller control, InputStream inStream) {
+        this.control = control;
+        this.scan = new Scanner(inStream);
+        this.commands = generateCommands();
+
+        giveUserCLIcontrol();
+    }
+
+    private void giveUserCLIcontrol() {
+
+        System.out.format("\n\n" +
+                "You can now use text commands. \n" +
+                "\n" +
+                "Press Enter to start simulation or input 'help' \n" +
+                "to list your options. \n" +
+                "\n" +
+                "Pressing Enter while the simulation is running \n" +
+                "will pause it. \n");
+
+        control.pauseSimulation();
+
+        while (true) {
+
+            // Wait for user pressing Enter
+            System.out.print("\n> ");
+            String line = scan.nextLine().trim().toLowerCase();
+            // Infinite loop ends when user enters "exit" or "quit"
+
+            if (control.isPaused()) {
+
+                // Issue commands
+
+                if (line.isEmpty()) {
+                    System.out.println("Resuming simulation...");
+                    control.resumeSimulation();
+                } else {
+                    execute(line);
+                }
+
+            } else {
+
+                System.out.println("Simulation paused. Waiting for input...");
+                control.pauseSimulation();
+
+            }
+        }
+    }
+
+    private ArrayList<Command> generateCommands() {
+
+        ArrayList<Command> cmds = new ArrayList<>();
+
+        cmds.add(new Command(
+                "status cars", new String[]
+                {"cars", "status c"},
+                "View all cars' positions. ") {
+
+            @Override
+            void action() {
+                System.out.println("\nPrinting status of cars in model: ");
+                for (Car c : control.sentCars)
+                    System.out.format("  %s - %s\n", c, c.currentPosition);
+            }
+        });
+
+        cmds.add(new Command(
+                "status orders", new String[]
+                {"status o", "status as"},
+                "View orders assigned to cars. ") {
+
+            @Override
+            void action() {
+                System.out.println("\nPrinting status of assigned orders: ");
+                for (Car c : control.sentCars)
+                    for (Order o : c.assignedOrders)
+                        System.out.format("  Order %s assigned to %s (%s)\n",
+                                o, c, c.currentPosition);
+            }
+        });
+
+        cmds.add(new Command(
+                "status pending", new String[]
+                {"status pend", "status station"},
+                "View orders pending at the station. ") {
+
+            @Override
+            void action() {
+                System.out.println("\n" +
+                        "Printing status of orders pending at the station: ");
+                for (Order o : control.pendingOrders)
+                    System.out.format("  %s (added @%s)\n", o, o.timeAdded);
+            }
+        });
+
+
+        cmds.add(new Command(
+                "status step", new String[]
+                {"status st", "status real", "status sim"},
+                "View simulation and realtime step values.") {
+
+            @Override
+            void action() {
+                System.out.format("\n" +
+                                "Every %d milliseconds in real time, the simulation time \n" +
+                                "is incremented by %d minutes. \n",
+                        control.stepRealtimeMillis,
+                        control.stepSimulationMinutes);
+            }
+        });
+
+
+        cmds.add(new Command(
+                "status model", new String[]
+                {"status mod"},
+                "View attributes of model. ") {
+
+            @Override
+            void action() {
+                System.out.format("\n" +
+                        "Model statistics: \n" +
+                        "" + control.model.statistics() + "\n");
+            }
+        });
+
+
+        cmds.add(new Command(
+                "set sim step", new String[]
+                {"set sim st", "set st", "set simulation st"},
+                "Change simulation step (in simulation minutes). ") {
+
+            @Override
+            void action() {
+
+                System.out.format("\n" +
+                        "Simulation step interval currently set to: " +
+                        "%d minutes\n", control.stepSimulationMinutes);
+
+                System.out.format("\n" +
+                        "Input a number of minutes between every simulated\n" +
+                        "step of the simulation. \n" +
+                        "Or input an empty line to leave existing value. \n" +
+                        "\n" +
+                        "[minutes] > ");
+
+                if (scan.hasNextInt()) {
+                    String cleanLine = scan.nextLine().replaceAll("[^\\d]", "");
+                    int newval = Integer.valueOf(cleanLine);
+                    if (newval > 0) {
+                        System.out.format("Setting simulation step to %d...\n", newval);
+                        control.stepSimulationMinutes = newval;
+                        return;
+                    } else {
+                        System.out.format("Number of minutes must be non-zero positive. \n");
+                    }
+                }
+
+                String line = scan.nextLine(); // Dump this invalid line
+                if (!line.isEmpty()) System.out.format("This is not a number. ");
+                System.out.format("Leaving default value of: %d minutes.\n",
+                        control.stepSimulationMinutes);
+            }
+        });
+
+        cmds.add(new Command(
+                "set real step", new String[]
+                {"set real st", "set realtime st"},
+                "Change real time step (in milliseconds). ") {
+
+            @Override
+            void action() {
+
+                System.out.format("\n" +
+                        "Realtime step interval currently set to: " +
+                        "%d ms\n", control.stepRealtimeMillis);
+
+                System.out.format("\n" +
+                        "Input a number of milliseconds between every simulated\n" +
+                        "step of the simulation. \n" +
+                        "Or input an empty line to leave existing value. \n" +
+                        "\n" +
+                        "[ms] > ");
+
+                if (scan.hasNextInt()) {
+                    String cleanLine = scan.nextLine().replaceAll("[^\\d]", "");
+                    int newval = Integer.valueOf(cleanLine);
+                    if (newval > 0) {
+                        System.out.format("Setting realtime step to %d...\n", newval);
+                        control.stepRealtimeMillis = newval;
+                        return;
+                    } else {
+                        System.out.format("Number of milliseconds must be non-zero positive. \n");
+                    }
+                }
+
+                String line = scan.nextLine(); // Dump this invalid line
+                if (!line.isEmpty()) System.out.format("This is not a number. ");
+                System.out.format("Leaving default value of: %d ms.\n",
+                        control.stepRealtimeMillis);
+            }
+        });
+
+
+
+
+
+        ///  EXIT AND HELP COMMANDS AT THE END  ///
+
+        cmds.add(new Command(
+                "exit", new String[]
+                {"ex", "q"},
+                "Exits out of the program. ") {
+
+            @Override
+            void action() {
+                System.out.format("\n" +
+                        "Exiting program.\n");
+                System.exit(0);
+            }
+        });
+
+        cmds.add(new Command(
+                "help", new String[]
+                {"h", "?"},
+                "Prints help for controlling this simulation.") {
+
+            @Override
+            void action() {
+                String HELP = "\n" +
+                        "When paused, you can make changes to the model \n" +
+                        "and view attributes of the simulation objects. \n" +
+                        "\n" +
+                        "List of all commands: \n" +
+                        "" + generateCommandHelp() +
+                        "\n" +
+                        "There will be other commands coming. \n" +
+                        "\n" +
+                        "Input command or press enter (input empty line) to resume simulation. ";
+                System.out.println(HELP);
+            }
+        });
+
+        return cmds;
+    }
+
+    private Command findCommand(String command_name) {
+
+        for (Command cmd : commands)
+            for (String alias : cmd.abbrev)
+                if (command_name.startsWith(alias))
+                    return cmd;
+        return null;
+    }
+
+    private void descriptionOf(String command_name) {
+
+        if (command_name.trim().length() == 0) return;
+
+        Command cmd = findCommand(command_name);
+        if (cmd == null) {
+            System.out.format("'%s' is an unknown command.\n", command_name);
+            return;
+        }
+
+        System.out.format("'%s': %s\n", cmd.name, cmd.description);
+    }
+
+    void execute(String command_name) {
+
+        if (command_name.trim().length() == 0) return;
+
+        if (command_name.startsWith(CMDHELP_USAGE_PREFIX)) {
+
+            command_name = command_name.substring(CMDHELP_USAGE_PREFIX.length());
+            descriptionOf(command_name);
+
+        } else {
+
+            Command cmd = findCommand(command_name);
+            if (cmd == null) {
+                System.out.format("'%s' is an unknown command, cannot execute it.\n", command_name);
+                return;
+            }
+            cmd.action();
+        }
+
+    }
+
+    private String generateCommandHelp() {
+        StringBuilder sb = new StringBuilder("");
+        for (Command cmd : commands)
+            sb.append(String.format(
+                    " %-16s  %s\n",
+                    "'"+ cmd.name +"':", cmd.description));
+        return sb.toString();
+    }
+
+
+
+    abstract class Command {
+
+        final String name;
+        final String[] abbrev;
+        final String description;
+
+        Command(String name, String[] abbrev, String description) {
+            this.name = name;
+            this.abbrev = abbrev;
+            this.description = description;
+        }
+
+        abstract void action();
+    }
+}
