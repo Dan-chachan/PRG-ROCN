@@ -11,6 +11,8 @@ class Dungeon {
 
     public Dungeon() {
         this.levels = new ArrayList<>();
+
+        this.generateLevel();
     }
 
     public static void prettyPrint(Level level) {
@@ -25,7 +27,7 @@ class Dungeon {
         }
     }
 
-    public Level generateLevel() {
+    public void generateLevel() {
         Level level = new Level();
         Cell[][] data = level.getData();
         ArrayList<int[]> baseLocations = new ArrayList<int[]>();
@@ -90,8 +92,6 @@ class Dungeon {
 
         this.levels.add(level);
         this.currentLevel = level;
-        return level;
-
     }
 
     public Coords placeExits() {
